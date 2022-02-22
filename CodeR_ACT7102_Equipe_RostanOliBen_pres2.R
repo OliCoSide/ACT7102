@@ -261,7 +261,7 @@ ggsave("graph_Var.S.png",
          scale_x_continuous(labels = scales::dollar)
 )
 
-## TVaR de S : Revoir...petit problème dessus
+## TVaR de S : Revoir...petit problème sur le code
 TVaR.S <- sapply(seq.alpha_0, function(al) {
   ps <- coef.vs(al)
   
