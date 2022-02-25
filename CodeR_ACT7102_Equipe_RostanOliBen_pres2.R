@@ -299,10 +299,12 @@ TVaR.S(0, 0.995)
 TVaR.S(0.05, 0.995)
 TVaR.S(0.09, 0.995)
 
+#sapply(1:nrow(data.var.S2_long), function(k) {
+#  TVaR.S(data.var.S2_long[k, 4], data.var.S2_long[k, 1])
+#}) 
+
  
 
-# data.var.S2_long$len <- length(coef.vs(0))
-var.expr <- data.var.S2_long$value
-
-data.var.S2_long$TVaR.S <- (1 - pgamma(data.var.S2_long$value, 2:length(coef.vs(al)), beta)) *
-                            ps[k + 1] * k / beta)
+data.var.S2_long$TVaR.S <- sapply(1:nrow(data.var.S2_long), function(k) {
+                              TVaR.S(data.var.S2_long[k, 4], data.var.S2_long[k, 1])
+                            })
