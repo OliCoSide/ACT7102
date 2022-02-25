@@ -32,7 +32,9 @@ phi.Ki <- function(k.i, m = 14) {
 phi.Mstar <- function(lam, k.i, m = 14) exp(lam * (phi.Ki(k.i, m) - 1)) 
 
 f.Mstar <- function(lam, k.i, m = 14) {
-  Re(fft(phi.Mstar(lam, k.i, m), inverse = T))/(2^m)
+  uu <- Re(fft(phi.Mstar(lam, k.i, m), inverse = T))/(2^m)
+  
+  round(uu, 8)[1:100]
 }
 
 ## Espérance de Xi
@@ -103,6 +105,7 @@ F.Xi <- function(lam, k.i, x) {
   sum(fm[-1] * pgamma(x, 1 : (len - 1), beta)) + fm[1]
 }
 
+## VaR de Xi
 VaR.Xi <- function(lam, k.i, kappa) {
   fm <- f.Mstar(lam, k.i, m = 14)
   if (fm[1] > kappa) return(0)
@@ -112,6 +115,23 @@ VaR.Xi <- function(lam, k.i, kappa) {
 
 VaR.Xi(vect.lambda[1], k1, 0.995)
 VaR.Xi(vect.lambda[2], k2, 0.995) # ça ne marche pas
+
+## TVaR de Xi
+TVaR.Xi <- function(lam, k.i, kappa) {
+  fm <- f.Mstar(lam, k.i, m = 14)
+  vv <- VaR.Xi(lam, k.i, kappa)
+  
+  pgamma.bar <- function(k) 1 - pgamma(vv, k + 1, beta)
+  
+  k.sum <- sapply(1:(length(fm) - 1), function(k) {
+    fm[k + 1] * k * pgamma.bar(k) / beta
+  })
+  
+  sum(k.sum) / (1 - kappa)
+}
+
+TVaR.Xi(vect.lambda[1], k1, 0.995)
+TVaR.Xi(vect.lambda[2], k2, 0.995)
 
 ## Vérifier que Var(S) = 1050 + 21 440 * alpha_0
 sum(sapply(1:10, function(i) {
@@ -189,10 +209,11 @@ coef.vs <- function(alpha_0) {
   ls <- lambda.s(alpha_0)
   exp.s <- exp(ls * (ft - 1))
   
-  Re(fft(exp.s, inverse = T)) / (length(exp.s))
+  uu <- Re(fft(exp.s, inverse = T)) / (length(exp.s))
+  round(uu, 8)[1:100]
 }
 
-# coef.vs(0.05)
+# sum(coef.vs(0.025))
 ## Fonction de répartition de S
 F.S <- function(x, alpha_0) {
   pk <- coef.vs(alpha_0)
@@ -211,10 +232,13 @@ VaR.S <- function(alpha_0, kappa) {
 
 VaR.S(0, 0.995)
 VaR.S(0.05, 0.995)
-VaR.S(0.1, 0.999) 
+VaR.S(0.09, 0.995) 
 
-seq.alpha_0 <- seq(0, 0.1, by = 0.005)
-seq.kappa <- seq(0, 1, by = 0.01)
+#seq.alpha_0 <- seq(0, 0.1, by = 0.005)
+#seq.kappa <- seq(0, 0.99, by = 0.01)
+
+seq.alpha_0 <- seq(0, 0.1, by = 0.01)
+seq.kappa <- c(seq(0, 0.85, by = 0.05), 0.95, 0.99, 0.995, 0.999)
 
 data.var.S <- sapply(seq.alpha_0, function(al) {
   sapply(seq.kappa, function(ka) VaR.S(al, ka))
@@ -224,14 +248,9 @@ names(seq.alpha_0) <- sapply(seq.alpha_0, function(p) paste0("alpha_", p))
 names(seq.kappa) <- sapply(seq.kappa, function(p) paste0("kappa_", p))
 
 colnames(data.var.S) <- names(seq.alpha_0)
-rownames(data.var.S) <- names(seq.kappa)
+rownames(data.var.S) <- names(seq.kappa) 
 
-#data.pi[c(1:6, 37:41), 1:5]
-# data.var <- t(data.var)
-
-data.var.S2 <- as.data.frame(data.var.S)
-#head(data.var2)
-#colnames(data.var2) <- names(seq.alpha)
+data.var.S2 <- as.data.frame(data.var.S) 
 data.var.S2$kappa <- seq.kappa 
 
 data.var.S2_long <- reshape2::melt(data.var.S2, id.vars = "kappa")
@@ -260,23 +279,30 @@ ggsave("graph_Var.S.png",
          scale_y_continuous(labels = scales::dollar) + 
          scale_x_continuous(labels = scales::dollar)
 )
+   
 
-## TVaR de S : Revoir...petit problème sur le code
-TVaR.S <- sapply(seq.alpha_0, function(al) {
-  ps <- coef.vs(al)
+## TVaR de S
+TVaR.S <- function(alpha_0, kappa) {
+  fm <- coef.vs(alpha_0)
+  vv <- VaR.S(alpha_0, kappa)
   
-  sapply(seq.kappa, function(ka) {
-     var.k <- data.var.S2[ka, al] 
-     
-     pgam <- sapply(1:(length(ps) - 1), function(k) 
-       (1 - pgamma(var.k, k + 1, beta)) * ps[k + 1] * k / beta)
-     
-     sum(pgam)
+  pgamma.bar <- function(k) 1 - pgamma(vv, k + 1, beta)
+  
+  k.sum <- sapply(1:(length(fm) - 1), function(k) {
+    fm[k + 1] * k * pgamma.bar(k) / beta
   })
   
-})
+  sum(k.sum) / (1 - kappa)
+}
 
-data.var.S2_long$len <- length(coef.vs(0))
+TVaR.S(0, 0.995)
+TVaR.S(0.05, 0.995)
+TVaR.S(0.09, 0.995)
+
+ 
+
+# data.var.S2_long$len <- length(coef.vs(0))
+var.expr <- data.var.S2_long$value
 
 data.var.S2_long$TVaR.S <- (1 - pgamma(data.var.S2_long$value, 2:length(coef.vs(al)), beta)) *
                             ps[k + 1] * k / beta)
