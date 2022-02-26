@@ -154,7 +154,8 @@ lambda.s <- function(alpha_0) 5 * sum(vect.lambda) - (n - 1) * alpha_0
 v_k_fun <- function(m = 14) {
   phi_sum_k <- (phi.Ki(k1, m) * phi.Ki(k2, m))^5
   
-  Re(fft(phi_sum_k, inverse = T))/(2^m)
+  uu <- Re(fft(phi_sum_k, inverse = T))/(2^m)
+  round(uu, 8)[1:100]
 }
 v_k <- v_k_fun()
 
@@ -191,6 +192,7 @@ thau_123 <- function(alpha_0, k) {
   sum1 + (alpha_0 * v_k[k + 1]) / ls
 }
 
+## Poids associés à la distribution D de mélange d'erlangs
 vect.thau <- function(alpha_0) {
   v0 <- thau_nk(alpha_0, 0)
   v1 <- thau_123(alpha_0, 1)
@@ -202,8 +204,9 @@ vect.thau <- function(alpha_0) {
   c(v0, v1, v2, v3, vk)
 } 
 
-sum(vect.thau(0.5) > 1)
+# sum(vect.thau(0.5) > 1)
 
+## Poids associés à la distribution S de mélange d'erlangs
 coef.vs <- function(alpha_0) {
   ft <- fft(vect.thau(alpha_0))
   ls <- lambda.s(alpha_0)
@@ -261,7 +264,7 @@ col4 <- hcl.colors(8, "Batlow")
 ## "Viridis", "Plasma, "Purple-Orange"
 ## "Zissou1", "SunsetDark",  "Spectral"
 
-ggsave("graph_Var.S.png",
+ggsave("graph2_Var.S.png",
        data.var.S2_long %>% 
          ggplot(aes(x = kappa,
                     color = alpha,
@@ -298,13 +301,112 @@ TVaR.S <- function(alpha_0, kappa) {
 TVaR.S(0, 0.995)
 TVaR.S(0.05, 0.995)
 TVaR.S(0.09, 0.995)
-
-#sapply(1:nrow(data.var.S2_long), function(k) {
-#  TVaR.S(data.var.S2_long[k, 4], data.var.S2_long[k, 1])
-#}) 
-
  
-
 data.var.S2_long$TVaR.S <- sapply(1:nrow(data.var.S2_long), function(k) {
                               TVaR.S(data.var.S2_long[k, 4], data.var.S2_long[k, 1])
                             })
+
+ggsave("graph_TVar.S.png",
+       data.var.S2_long %>% 
+         ggplot(aes(x = kappa,
+                    color = alpha,
+                    group = factor(alpha))) + 
+         geom_line(aes(y = TVaR.S), lwd = 2, alpha = 0.8) +
+         scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"), 
+                               low = tail(col4, 1),
+                               high = col4[1],
+                               trans = "exp") + 
+         theme_bw() + 
+         labs(x = TeX("kappa"),
+              y = TeX("$TVaR_{\\kappa}(S)$"),
+              title = TeX("$TVaR_{\\kappa}(S)$ selon la valeur de $\\alpha_0$"),
+              subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) + 
+         scale_y_continuous(labels = scales::dollar) + 
+         scale_x_continuous(labels = scales::dollar)
+)
+
+##============== Calcul des contributions =====================
+# kl_table2
+
+## densité de J_(i)
+dens.J.i <- function(i, alpha_0, x) {
+  lam.i <- kl_table2[i, 4]
+  alph <- lam.i - alpha_0
+  
+  dpois(x, alph)
+}
+
+## densité de J_(-i)
+dens.J.im <- function(i, alpha_0, x) {
+  lam.i <- sum(kl_table2[-i, 4])
+  alph <- lam.i - alpha_0
+  
+  dpois(x, alph)
+}
+ 
+## densité de (M_i, N_-i) : pas complet
+dens.MN.i <- function(i, ki, ni_moins, alpha_0) {
+  to.sum <- sapply(0:min(ki, ni_moins), function(j) {
+    d1 <- dens.J.i(i, alpha_0, ki - j)
+    d2 <- dens.J.im(i, alpha_0, ni_moins - j)
+    
+    d1 * d2 * dpois(j, alpha_0)
+    
+    })
+  sum(to.sum)
+}
+
+## Coefficients de C_(-i)
+v_k_im <- function(im, m = 14) {
+  
+  if (im <= 5) {
+    phi_sum_k <- (phi.Ki(k1, m))^4 * (phi.Ki(k2, m))^5
+  } else {
+    phi_sum_k <- (phi.Ki(k1, m))^5 * (phi.Ki(k2, m))^4
+  }
+  
+  uu <- Re(fft(phi_sum_k, inverse = T))/(2^m)
+  round(uu, 8)[1:100]
+}
+
+v_k_im <- v_k_im_fun(1)
+sum(v_k_im)
+
+## Coeficients thau_im 
+ 
+lambda.s.im <- function(alpha_0, im) sum(kl_table2[-im, 4]) - (n - 2) * alpha_0
+
+thau_nk_im <- function(alpha_0, k, im) {
+  ## En réalité thau_nk calcule la valeur de thau_0 et les 
+  ## valeurs à partir de thau_4
+  
+  (alpha_0 / lambda.s.im(alpha_0, im)) * v_k_im(im)[k + 1]
+}
+
+thau_nk_im(alpha_0) 
+
+thau_123_im <- function(alpha_0, k, im) {
+  ls.im <- lambda.s.im(alpha_0, im)
+  
+  sum1 <- sum(sapply(1:10, function(l) {
+    lam.l <- kl_table2[-l, 4]
+    kl_table2[-l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
+  }))
+  
+  sum1 + (alpha_0 * v_k_im(im)[k + 1]) / ls.im
+}
+
+## Poids associés à la distribution D_(-i) de mélange d'erlangs
+vect.thau <- function(alpha_0, im) {
+  v0 <- thau_nk_im(alpha_0, 0, im)
+  v1 <- thau_123_im(alpha_0, 1, im)
+  v2 <- thau_123_im(alpha_0, 2, im)
+  v3 <- thau_123_im(alpha_0, 3, im)
+  
+  vk <- sapply(4:(length(v_k_im(im)) - 1), function(k) thau_nk_im(alpha_0, k, im))
+  
+  c(v0, v1, v2, v3, vk)
+} 
+
+vuu <- vect.thau(alpha_0, 1)
+sum(vuu)
