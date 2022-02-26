@@ -366,11 +366,10 @@ v_k_im <- function(im, m = 14) {
   }
   
   uu <- Re(fft(phi_sum_k, inverse = T))/(2^m)
-  round(uu, 8)[1:100]
+  round(uu, 9)[1:100]
 }
 
-v_k_im <- v_k_im_fun(1)
-sum(v_k_im)
+ 
 
 ## Coeficients thau_im 
  
@@ -383,21 +382,32 @@ thau_nk_im <- function(alpha_0, k, im) {
   (alpha_0 / lambda.s.im(alpha_0, im)) * v_k_im(im)[k + 1]
 }
 
-thau_nk_im(alpha_0) 
+thau_nk_im(alpha_0, 9, 1) 
 
 thau_123_im <- function(alpha_0, k, im) {
   ls.im <- lambda.s.im(alpha_0, im)
   
-  sum1 <- sum(sapply(1:10, function(l) {
-    lam.l <- kl_table2[-l, 4]
-    kl_table2[-l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
-  }))
+  #sum1 <- sum(sapply(1:10, function(l) {
+  #  if (l == im) next
+    
+  #  lam.l <- kl_table2[l, 4]
+  #  kl_table2[l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
+  #}))
   
-  sum1 + (alpha_0 * v_k_im(im)[k + 1]) / ls.im
+  ss1 <- 0
+  
+  for (l in 1:10) {
+    if (l == im) next
+    
+    lam.l <- kl_table2[l, 4]
+    ss1 <- ss1 + kl_table2[l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
+  }
+  
+  ss1 + (alpha_0 * v_k_im(im)[k + 1]) / ls.im
 }
 
 ## Poids associés à la distribution D_(-i) de mélange d'erlangs
-vect.thau <- function(alpha_0, im) {
+vect.thau.im <- function(alpha_0, im) {
   v0 <- thau_nk_im(alpha_0, 0, im)
   v1 <- thau_123_im(alpha_0, 1, im)
   v2 <- thau_123_im(alpha_0, 2, im)
@@ -408,5 +418,5 @@ vect.thau <- function(alpha_0, im) {
   c(v0, v1, v2, v3, vk)
 } 
 
-vuu <- vect.thau(alpha_0, 1)
+vuu <- vect.thau.im(alpha_0, 6)
 sum(vuu)
