@@ -28,17 +28,21 @@ phi.Ki <- function(k.i, m = 14) {
   fft(ki.long)
 }
 
-
 phi.Mstar <- function(lam, k.i, m = 14) exp(lam * (phi.Ki(k.i, m) - 1)) 
 
 f.Mstar <- function(lam, k.i, m = 14) {
-  uu <- Re(fft(phi.Mstar(lam, k.i, m), inverse = T))/(2^m)
-  
-  round(uu, 8)[1:100]
+  Re(fft(phi.Mstar(lam, k.i, m), inverse = T))/(2^m)
 }
 
 ## Espérance de Xi
-Esp.X <- function(lam, k.i) {
+Esp.X <- function(lam, k.i, analytic = FALSE) {
+  if(analytic){ # version analytique
+    return(
+      sum(lam * # Espérance de M
+            (k.i * (seq(k.i) - 1)/beta) # espérance de B (pondération des gammas)
+      )
+    )
+  }
   fm <- f.Mstar(lam, k.i)
   len <- length(fm)
   sum( fm[-1] * (1:(len - 1)) / beta)
@@ -48,19 +52,30 @@ Esp.X <- function(lam, k.i) {
 Esp.X2 <- function(lam, k.i) {
   fm <- f.Mstar(lam, k.i, m = 6)
   len <- length(fm)
-  sum( fm[-1] * (1:(len - 1)) * (2 : len) / beta)
+  sum( fm[-1] * (1:(len - 1)) * (2 : len) / beta^2)
 }
 
 ## Variance de Xi
-var.X <- function(lam, k.i) Esp.X2(lam, k.i) - (Esp.X(lam, k.i))^2
+var.X <- function(lam, k.i, analytic = FALSE){
+  if(analytic){
+    return(
+      sum(lam * k.i * (seq(k.i) - 1) * (seq(k.i)) / beta^2)
+    )
+  }
+  Esp.X2(lam, k.i) - (Esp.X(lam, k.i))^2
+}
 
-## Applications
+## Applications ---- [OC] analytical form 
 Esp.X(vect.lambda[1], k1)
+Esp.X(vect.lambda[1], k1, analytic = TRUE)
 Esp.X(vect.lambda[2], k2)
+Esp.X(vect.lambda[2], k2, analytic = TRUE)
 
-## Je ne comprends pas pourquoi ça ne donne pas 
+## Je ne comprends pas pourquoi ça ne donne pas ---- [OC] fixed + analytical form 
 var.X(vect.lambda[1], k1)
+var.X(vect.lambda[1], k1, analytic = TRUE)
 var.X(vect.lambda[2], k2)
+var.X(vect.lambda[2], k2, analytic = TRUE)
 
 ## Moment d'ordre k de Mstar
 Moments <- function(lam, k.i, ord) {
@@ -72,13 +87,15 @@ Moments <- function(lam, k.i, ord) {
 
 ## Variance de Xi : ça marche :)
 var.Xi <- function(lam, k.i) { 
-  mum <- Moments(lam, k.i, ord = 1) + Moments(lam, k.i, ord = 2) - (Moments(lam, k.i, ord = 1))^2
+  mum <- Moments(lam, k.i, ord = 1) +
+    Moments(lam, k.i, ord = 2) -
+    (Moments(lam, k.i, ord = 1))^2
   mum / beta^2
 }
 
 var.Xi(vect.lambda[1], k1)
 var.Xi(vect.lambda[2], k2)
-
+ 
 dens.Mstar1 <- f.Mstar(vect.lambda[1], k1)
 sum(dens.Mstar1 * (0 : (length(dens.Mstar1) - 1)))/beta
 
@@ -98,23 +115,25 @@ Esp.M <- function(lam, k.i, ord) {
 }
 
 ## Fonction de répartition de Xi
-F.Xi <- function(lam, k.i, x) {
-  fm <- f.Mstar(lam, k.i, m = 14)
+F.Xi <- function(lam, k.i, x, m = 6) {
+  fm <- f.Mstar(lam, k.i, m = 6)
   len <- length(fm)
   
-  sum(fm[-1] * pgamma(x, 1 : (len - 1), beta)) + fm[1]
+  fm[1] + sum(fm[-1] * pgamma(x, 1 : (len - 1), beta)) 
 }
 
 ## VaR de Xi
 VaR.Xi <- function(lam, k.i, kappa) {
-  fm <- f.Mstar(lam, k.i, m = 14)
+  #fm <- f.Mstar(lam, k.i, m = 14)
   if (fm[1] > kappa) return(0)
-  
   optimise(function(x) abs(F.Xi(lam, k.i, x) - kappa), c(0, 200))$minimum
 }
 
 VaR.Xi(vect.lambda[1], k1, 0.995)
 VaR.Xi(vect.lambda[2], k2, 0.995) # ça ne marche pas
+
+F.Xi(vect.lambda[2], k2, 59.9921) # Résultat de l'article (devrait être 0.995)
+F.Xi(vect.lambda[2], k2, VaR.Xi(vect.lambda[2], k2, 0.995)) # Notre résultat 
 
 ## TVaR de Xi
 TVaR.Xi <- function(lam, k.i, kappa) {
