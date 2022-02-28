@@ -502,6 +502,9 @@ v_k_im <- function(im, m = 14) {
 ## PAr Oli
 TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
                           maxval_gen = 2^8){
+  
+  VaR <-VaR.S(alpha0, kappa = kap)
+  
   terms <- sapply(0:maxal_k, function(ki){ ## sum ki = 0,  ... infty
     
     zet_i_ki <- zeta(k = 3, ## dummy value when full_vec = TRUE
@@ -521,7 +524,7 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
             convol_v_tau <- Re(fft(fft(v)*fft(tau),inverse = TRUE))/maxval_gen
             return(
               zet_i_ki[l + 1] * convol_v_tau[k - l + 1] * l/beta *
-                pgamma(VaR.S(alpha0, kappa = kap),
+                pgamma(VaR,
                        k + 1, beta,
                        lower.tail = FALSE))
           }))
