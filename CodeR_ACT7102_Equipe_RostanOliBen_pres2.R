@@ -124,7 +124,7 @@ F.Xi <- function(lam, k.i, x, m = 6) {
 
 ## VaR de Xi
 VaR.Xi <- function(lam, k.i, kappa) {
-  #fm <- f.Mstar(lam, k.i, m = 14)
+  fm <- f.Mstar(lam, k.i, m = 14)
   if (fm[1] > kappa) return(0)
   optimise(function(x) abs(F.Xi(lam, k.i, x) - kappa), c(0, 200))$minimum
 }
@@ -166,62 +166,121 @@ sum(sapply(1:10, function(i) {
 ## Distribution S = X1 + ... + X10
 n <- 10
 
-lambda.s <- function(alpha_0) 5 * sum(vect.lambda) - (n - 1) * alpha_0
+lambda.s <- function(alpha_0, remove_i = NULL){
+  lam_s <- 5 * sum(vect.lambda) - (n - 1) * alpha_0
+  
+  if(!is.null(remove_i)){
+    to_remove <- vect.lambda[1] - alpha_0 # On mets pour i = 1..5
+    if(remove_i >= 6) to_remove <- vect.lambda[2] - alpha_0# on corrige pour i = 6...10
+  }
+} 
 
 ## Trouver v_k tel que P(K1 + ... + Kn = k) = v_k
- 
-v_k_fun <- function(m = 14) {
-  phi_sum_k <- (phi.Ki(k1, m) * phi.Ki(k2, m))^5
+v_k_fun <- function(m = 2^8, remove_i = NULL,
+                    convol = 1) {
   
-  uu <- Re(fft(phi_sum_k, inverse = T))/(2^m)
-  round(uu, 8)[1:100]
+  ind_15 <- 0   # par défaut, on ne retire pas de i 
+  ind_610 <- 0  
+  
+  ## On vérifie si on doit retirer des i
+  if(!is.null(remove_i)){
+    if(remove_i <= 5) ind_15 <- 1 # i = 1...5
+    if(remove_i >= 6) ind_610 <- 1 # i = 6...10
+  }
+  
+  ## On fait ce qu'on a à faire
+  phi_sum_k <- phi.Ki(k1, m)^(5 - ind_15) * phi.Ki(k2, m)^(5 - ind_610)
+  Re(fft(phi_sum_k^convol, inverse = T))/(m)
 }
-v_k <- v_k_fun()
 
+## ??? 
 k.names <- sapply(1:3, function(p) paste0("k_", p)) 
 l_names <- sapply(1:10, function(p) paste0("l_", p))
 
+
+## Ok
 kl_table <- sapply(1:3, function(k) {
   u1 <- c(0.7, 0.2, 0.1) 
   u2 <- c(0.1, 0.4, 0.5) 
   sapply(1:10, function(l) u1[k] * (l <= 5) + u2[k] * (l > 5))
 })
 
+## ok, poids
 colnames(kl_table) <- k.names
+
 
 kl_table2 <- as.data.frame(kl_table)
 kl_table2$lambda_l <- c(rep(0.1, 5), rep(0.2, 5))
 
+## à revoir
+zeta <- function(k, i, convol = 1,
+                 maxval = 2^8,
+                 full_vec = FALSE){
+  
+  ## Pour i = 1...5
+  zet <- c(k1, rep(0, maxval - length(k1)))
+  ## Pour i = 6..10 on corrige
+  if(i %in% 6:10) zet <- c(k2, rep(0, maxval - length(k2)))
+  
+  ## On convolue au besoin
+  if(convol > 1){
+    zet <- Re(fft(fft(zet)^convol, inverse = TRUE))/maxval
+  }
+  
+  ## Si on veut le vecteur entier, on retourne le vecteur entier
+  if(full_vec == TRUE) return(zet)
+  
+  ## sinon, seulement la valeur demandée
+  zet[k + 1]
+}
+
 ## trouver les thau_k
-thau_nk <- function(alpha_0, k) {
+thau_vec <- function(alpha_0, table, maxval = 2^8,
+                     convol = 1, remove_i = NULL) {
   ## En réalité thau_nk calcule la valeur de thau_0 et les 
   ## valeurs à partir de thau_4
   
-  (alpha_0 / lambda.s(alpha_0)) * v_k[k + 1]
+  v_k <- v_k_fun(remove_i = remove_i, maxval = maxval)          # nu_k
+  ls <- lambda.s(alpha_0, remove_i = remove_i)   # lambda_s
+  
+
+  
+  ## Si on veut retirer un des "i" (\nu^{(-i)})
+  if(!is.null(remove_i)){
+   table <- table[-1 * remove_i,] # onretire la colonne que l'on ne veut plus
+  }
+  
+  ## zeta_vec (on ajoute beaucoup de colonnes de 0)
+  zeta <- cbind(rep(0, nrow(table)),
+                table[, -4],
+                matrix(rep(0, maxval * nrow(table)),
+                       nrow = nrow(table)))
+  
+  ## On retourne un vecteur complet de tau (peut être très grand)
+  full_vec <- sapply(1:maxval, function(k){
+    alpha_0/ls * v_k[k + 1] + 
+      sum((table$lambda_l - alpha0)/ls * zeta[, k + 1])
+  })
+  
+  ## Si on doit convoluer, on convolue
+  if(convol > 1){
+    full_vec <- Re(fft(fft(full_vec)^convol, inverse = TRUE))/maxval
+  }
+  
+  return(full_vec)
 }
 
-thau_123 <- function(alpha_0, k) {
-  ls <- lambda.s(alpha_0)
-  
-  sum1 <- sum(sapply(1:10, function(l) {
-                    lam.l <- kl_table2[l, 4]
-                    kl_table2[l, k] * (lam.l - alpha_0) / ls
-          }))
-  
-  sum1 + (alpha_0 * v_k[k + 1]) / ls
-}
-
-## Poids associés à la distribution D de mélange d'erlangs
-vect.thau <- function(alpha_0) {
-  v0 <- thau_nk(alpha_0, 0)
-  v1 <- thau_123(alpha_0, 1)
-  v2 <- thau_123(alpha_0, 2)
-  v3 <- thau_123(alpha_0, 3)
-  
-  vk <- sapply(4:(length(v_k) - 1), function(k) thau_nk(alpha_0, k))
-  
-  c(v0, v1, v2, v3, vk)
-} 
+# ## Poids associés à la distribution D de mélange d'erlangs
+# vect.thau <- function(alpha_0) {
+#   v0 <- thau_nk(alpha_0, 0)
+#   v1 <- thau_123(alpha_0, 1)
+#   v2 <- thau_123(alpha_0, 2)
+#   v3 <- thau_123(alpha_0, 3)
+#   
+#   vk <- sapply(4:(length(v_k) - 1), function(k) thau_nk(alpha_0, k))
+#   
+#   c(v0, v1, v2, v3, vk)
+# } 
 
 # sum(vect.thau(0.5) > 1)
 
@@ -230,7 +289,7 @@ coef.vs <- function(alpha_0) {
   ft <- fft(vect.thau(alpha_0))
   ls <- lambda.s(alpha_0)
   exp.s <- exp(ls * (ft - 1))
-  
+
   uu <- Re(fft(exp.s, inverse = T)) / (length(exp.s))
   round(uu, 8)[1:100]
 }
@@ -390,52 +449,87 @@ v_k_im <- function(im, m = 14) {
 
  
 
-## Coeficients thau_im 
- 
-lambda.s.im <- function(alpha_0, im) sum(kl_table2[-im, 4]) - (n - 2) * alpha_0
+# ## Coeficients thau_im 
+#  
+# lambda.s.im <- function(alpha_0, im) sum(kl_table2[-im, 4]) - (n - 2) * alpha_0
+# 
+# thau_nk_im <- function(alpha_0, k, im) {
+#   ## En réalité thau_nk calcule la valeur de thau_0 et les 
+#   ## valeurs à partir de thau_4
+#   
+#   (alpha_0 / lambda.s.im(alpha_0, im)) * v_k_im(im)[k + 1]
+# }
+# 
+# thau_nk_im(alpha_0, 9, 1) 
+# 
+# thau_123_im <- function(alpha_0, k, im) {
+#   ls.im <- lambda.s.im(alpha_0, im)
+#   
+#   #sum1 <- sum(sapply(1:10, function(l) {
+#   #  if (l == im) next
+#     
+#   #  lam.l <- kl_table2[l, 4]
+#   #  kl_table2[l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
+#   #}))
+#   
+#   ss1 <- 0
+#   
+#   for (l in 1:10) {
+#     if (l == im) next
+#     
+#     lam.l <- kl_table2[l, 4]
+#     ss1 <- ss1 + kl_table2[l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
+#   }
+#   
+#   ss1 + (alpha_0 * v_k_im(im)[k + 1]) / ls.im
+# }
 
-thau_nk_im <- function(alpha_0, k, im) {
-  ## En réalité thau_nk calcule la valeur de thau_0 et les 
-  ## valeurs à partir de thau_4
-  
-  (alpha_0 / lambda.s.im(alpha_0, im)) * v_k_im(im)[k + 1]
-}
+# ## Poids associés à la distribution D_(-i) de mélange d'erlangs
+# vect.thau.im <- function(alpha_0, im) {
+#   v0 <- thau_nk_im(alpha_0, 0, im)
+#   v1 <- thau_123_im(alpha_0, 1, im)
+#   v2 <- thau_123_im(alpha_0, 2, im)
+#   v3 <- thau_123_im(alpha_0, 3, im)
+#   
+#   vk <- sapply(4:(length(v_k_im(im)) - 1), function(k) thau_nk_im(alpha_0, k, im))
+#   
+#   c(v0, v1, v2, v3, vk)
+# } 
+# 
+# vuu <- vect.thau.im(alpha_0, 6)
+# sum(vuu)
 
-thau_nk_im(alpha_0, 9, 1) 
-
-thau_123_im <- function(alpha_0, k, im) {
-  ls.im <- lambda.s.im(alpha_0, im)
-  
-  #sum1 <- sum(sapply(1:10, function(l) {
-  #  if (l == im) next
+## PAr Oli
+TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
+                          maxval_gen = 2^8){
+  terms <- sapply(0:maxal_k, function(ki){ ## sum ki = 0,  ... infty
     
-  #  lam.l <- kl_table2[l, 4]
-  #  kl_table2[l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
-  #}))
-  
-  ss1 <- 0
-  
-  for (l in 1:10) {
-    if (l == im) next
+    zet_i_ki <- zeta(k = 3, ## dummy value when full_vec = TRUE
+                     i = i, maxval = maxval_gen,
+                     convol = ki, full_vec = TRUE)
     
-    lam.l <- kl_table2[l, 4]
-    ss1 <- ss1 + kl_table2[l, k] * (lam.l - alpha_0) / lambda.s.im(alpha_0, l)
-  }
+    sum(sapply(0:maxval_k, function(ni){ ## sum n-i = 0 , ... infty
+      dens.MN.i(i, ki, ni, alpha_0 = alpha0) * # P(M_i = ki, N_-i = ni)
+        sum(sapply(1:maxval_gen, function(k){ # sum k = 1 ... infty
+          sum(sapply(1:k, function(l){
+            
+            v <- v_k_fun(m = maxval_gen)
+            tau <- tau_vec(alpha0, kl_table2,
+                           maxval = maxval_gen,
+                           convol = ni - l,
+                           remove_i = i)
+            convol_v_tau <- Re(fft(fft(v)*fft(tau),inverse = TRUE))/maxval_gen
+            return(
+              zet_i_ki[l + 1] * convol_v_tau[k - l + 1] * l/beta *
+                pgamma(VaR.S(alpha0, kappa = kap),
+                       k + 1, beta,
+                       lower.tail = FALSE))
+          }))
+        }))
+    }))
+  })
   
-  ss1 + (alpha_0 * v_k_im(im)[k + 1]) / ls.im
+  return(
+    1/(1 - kap) * sum(terms)
+  )
 }
-
-## Poids associés à la distribution D_(-i) de mélange d'erlangs
-vect.thau.im <- function(alpha_0, im) {
-  v0 <- thau_nk_im(alpha_0, 0, im)
-  v1 <- thau_123_im(alpha_0, 1, im)
-  v2 <- thau_123_im(alpha_0, 2, im)
-  v3 <- thau_123_im(alpha_0, 3, im)
-  
-  vk <- sapply(4:(length(v_k_im(im)) - 1), function(k) thau_nk_im(alpha_0, k, im))
-  
-  c(v0, v1, v2, v3, vk)
-} 
-
-vuu <- vect.thau.im(alpha_0, 6)
-sum(vuu)
