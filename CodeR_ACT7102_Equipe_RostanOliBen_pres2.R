@@ -240,7 +240,7 @@ thau_vec <- function(alpha_0, table, maxval = 2^8,
   ## En réalité thau_nk calcule la valeur de thau_0 et les 
   ## valeurs à partir de thau_4
   
-  v_k <- v_k_fun(remove_i = remove_i, maxval = maxval)          # nu_k
+  v_k <- v_k_fun(remove_i = remove_i, m = maxval)          # nu_k
   ls <- lambda.s(alpha_0, remove_i = remove_i)   # lambda_s
   
 
@@ -284,15 +284,45 @@ thau_vec <- function(alpha_0, table, maxval = 2^8,
 
 # sum(vect.thau(0.5) > 1)
 
+fgp_pois <- function(s, lam) exp(lam * (s - 1))
+
+
+fgp_k <- function(s, i){
+  probs <- zeta(k = 2, i, full_vec = TRUE)
+  
+  sum(probs * s^(seq(probs) - 1))
+}
+
+fgp_weight_S <- function(s, lam1, lam6, alpha0){
+  fgp_pois((fgp_k(s, i = 1) * fgp_k(s, i = 6))^5, lam = alpha0) * 
+    fgp_pois(fgp_k(s, i = 1), lam = 5 * (lam1 - alpha0)) * 
+    fgp_pois(fgp_k(s, i = 6), lam = 5 * (lam2 - alpha0))
+}
+
+weight_S <- function(lam1, lam6, alpha0, maxval = 2^8){
+  ## sévérité dégénérée
+  sev <- c(0, 1, rep(0, maxval - 2))
+  
+  ## fonction caractéristique poids de S (M**)
+  phi_M_starstar <- fgp_weight_S(fft(sev), lam1, lam6, alpha0)
+  
+  Re(fft(phi_M_starstar, inverse = TRUE))/maxval
+}
+
+
+
 ## Poids associés à la distribution S de mélange d'erlangs
 coef.vs <- function(alpha_0) {
-  ft <- fft(vect.thau(alpha_0))
+  ft <- fft(thau_vec(alpha_0, table = kl_table2))
   ls <- lambda.s(alpha_0)
   exp.s <- exp(ls * (ft - 1))
 
   uu <- Re(fft(exp.s, inverse = T)) / (length(exp.s))
   round(uu, 8)[1:100]
 }
+
+
+
 
 # sum(coef.vs(0.025))
 ## Fonction de répartition de S
