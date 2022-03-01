@@ -30,7 +30,6 @@ phi.Ki <- function(k.i, m = 2^8) {
 
 phi.Mstar <- function(lam, k.i, m = 2^8) exp(lam * (phi.Ki(k.i, m) - 1)) 
 
-
 f.Mstar <- function(lam, k.i, m = 2^8) {
   Re(fft(phi.Mstar(lam, k.i, m), inverse = T))/(m)
 }
