@@ -304,6 +304,8 @@ F.S <- function(x, alpha_0) {
 
 ##=========================== VaR
 ##===
+
+
 VaR.S <- function(alpha_0, kappa) {
   fm <- coef.vs(alpha_0)
   if (fm[1] > kappa) return(0)
