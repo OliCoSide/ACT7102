@@ -59,8 +59,8 @@ Esp.X(vect.lambda[1], k1)
 Esp.X(vect.lambda[2], k2)
 
 ## Je ne comprends pas pourquoi ça ne donne pas 
-var.X(vect.lambda[1], k1)
-var.X(vect.lambda[2], k2)
+#var.X(vect.lambda[1], k1)
+#var.X(vect.lambda[2], k2)
 
 ## Moment d'ordre k de Mstar
 Moments <- function(lam, k.i, ord) {
@@ -344,7 +344,7 @@ dens.J.im <- function(i, alpha_0, x) {
   dpois(x, alph)
 }
  
-## densité de (M_i, N_-i) : pas complet
+## densité de (M_i, N_-i) :  
 dens.MN.i <- function(i, ki, ni_moins, alpha_0) {
   to.sum <- sapply(0:min(ki, ni_moins), function(j) {
     d1 <- dens.J.i(i, alpha_0, ki - j)
@@ -415,8 +415,272 @@ vect.thau.im <- function(alpha_0, im) {
   
   vk <- sapply(4:(length(v_k_im(im)) - 1), function(k) thau_nk_im(alpha_0, k, im))
   
-  c(v0, v1, v2, v3, vk)
+  uu <- c(v0, v1, v2, v3, vk)
+  uu / sum(uu)
 } 
 
-vuu <- vect.thau.im(alpha_0, 6)
-sum(vuu)
+#vuu <- vect.thau.im(alpha_0, 6)
+#sum(vuu)
+
+## Coder la formule du Box II
+#weight.Bi(ki, i)[l + 1] weight.DC
+
+v_thau <- function(alpha_0, i, l, m, ni) {
+  
+  to.sum <- sapply(0:m, function(u) {
+                    vu <- weight.Ci(i, l)[u + 1]
+                    thau <- weight.Di(alpha_0, i, ni, l)[m - u + 1]
+    
+                    vu * thau
+              })
+  
+  sum(to.sum)
+}
+
+weight.box2 <- function(alpha_0, kappa, ki, i, ni) {
+  
+  w1 <- weight.Bi(ki, i)
+  len <- length(w1)
+  vect.k <- 1:(len - 1)
+  ## data.var.S2_long[kl, 3] = Valeur de VaR.S dans le data.frame data.var.S2_long
+  
+  wl <- which(data.var.S2_long$kappa == kappa & data.var.S2_long$alpha == alpha_0)
+  
+  sk <- sapply(vect.k, function(k) {
+    vect.l <- 1:k
+    pbar <- 1 - pgamma(data.var.S2_long[wl, 3], k + 1, beta)
+    
+    sl <- sapply(vect.l, function(l) {
+      ww1 <- w1[l + 1]
+      ww2 <- v_thau(alpha_0, i, l, k - l, ni)
+      
+      ww1 * ww2 * (l / beta) * pbar 
+      
+    })
+    
+    sum(sl)
+  })
+  
+  sum(sk)
+}
+
+##
+TVaR.box2 <- function(i, alpha_0, kappa, kimax = 3, nimax = 3) {
+  vect.ki <- 1:kimax
+  vect.ni <- 1:nimax
+  
+  s2 <- sapply(vect.ki, function(ki) {
+    
+    s1 <- sapply(vect.ni, function(ni) {
+      
+      dd1 <- dens.MN.i(i, ki, ni, alpha_0)
+      dd2 <- weight.box2(alpha_0, kappa, ki, i, ni)
+      
+      dd1 * dd2
+    })
+    
+    sum(s1)
+    
+  })
+  
+  sum(s2) / (1 - kappa)
+}
+
+TVaR.box2(1, alpha_0, kappa, kimax = 2, nimax = 2)
+
+## Poids associé à  sum_{m = 1}^{ni - j} D_{i, m} + sum_{r = 1}^{j} C_{i, r}
+weight.DC <- function(alpha_0, im, ni, j) { 
+  p2 <- weight.Di(alpha_0, im, ni, j) 
+  p3 <- weight.Ci(im, j)
+  
+  phip <-  fft(p2) * fft(p3)
+  
+  uu <- Re(fft(phip, inverse = T)) / length(phip)
+  round(uu, 8)[1:100]
+}
+
+
+## Poids associés à sum_{l = 1}^ki B_{i,l}
+weight.Bi <- function(ki, i) {
+  
+  if(i <= 5) {
+    kk <- k1
+  } else {
+    kk <- k2
+  }
+  phi.kk <- (phi.Ki(kk, m = 8))^ki
+  
+  Re(fft(phi.kk, inverse = T)) / length(phi.kk)
+}
+
+#sum(weight.Bi(6, 3))
+
+## Poids associés à sum_{m = 1}^{ni - j} D_{i, m}
+weight.Di <- function(alpha_0, im, ni, j) {
+  kk <- vect.thau.im(alpha_0, im)
+  
+  phi.kk <- (phi.Ki(kk, m = 14))^(ni - j)
+  
+  uu <- Re(fft(phi.kk, inverse = T)) / length(phi.kk)
+  round(uu, 8)[1:100]
+}
+
+# length(weight.Di(alpha_0, 6, 3, 1))
+
+## Poids associés à sum_{r = 1}^{j} C_{i, r}
+weight.Ci <- function(im, j) {
+  kk <- v_k_im(im)
+  
+  phi.kk <- (phi.Ki(kk, m = 14))^j
+  
+  uu <- Re(fft(phi.kk, inverse = T)) / length(phi.kk)
+  round(uu, 8)[1:100]
+}
+
+#length(weight.Ci(4, 2))
+
+## Poids associé à sum_{l = 1}^ki B_{i,l} + sum_{m = 1}^{ni - j} D_{i, m} + sum_{r = 1}^{j} C_{i, r}
+weight.BDC <- function() {
+  p1 <- weight.Bi(ki, i) 
+  p2 <- weight.Di(alpha_0, im, ni, j) 
+  p3 <- weight.Ci(im, j)
+  
+  phip <- fft(p1) * fft(p2) * fft(p3)
+  
+  uu <- Re(fft(phip, inverse = T)) / length(phip)
+  round(uu, 8)[1:100]
+}
+
+## Proposition 8
+qm10 <- function(vect.m, vect.lam, alpha_0) {
+  
+  sp1 <- sapply(0:min(vect.m), function(j) {
+          dp1 <- dpois(j, alpha_0)
+    
+          pr1 <- sapply(1:length(vect.m), function(i) {
+      
+                    dpois(vect.m[i] - j, vect.lam[i] - alpha_0)
+                })
+    
+          dp1 * prod(pr1)
+  })
+  
+  sum(sp1)
+}
+ 
+
+psi.ji <- function(vect.j, vect.m, mi, i, m.max = 3) {
+  pv <- weight.Bi(mi, i)
+  
+  sapply(1:length(vect.m), function(m.i) {
+    valeurs <- m_values[m.i, ]
+    
+  })
+  
+} 
+
+m1 <- 1:6
+m2 <- 1:6
+m3 <- 1:6
+
+m_values <- expand.grid(m1, m2, m3)
+
+m_values[33,]
+##===================================================================
+## EXEMPLE 12
+##===================================================================
+
+## Espérence de Xi
+mean.X.Gam <- function(lam, gam) {
+   lam * gam * 1000
+}
+mean.X.Gam(0.003, 2)
+mean.X.Gam(0.004, 1)
+
+## Variance de Xi
+var.X.Gam <- function(lam, gam) lam * gam * (1 + gam) * 1e6
+
+var.X.Gam(0.003, 2)
+var.X.Gam(0.004, 1)
+
+## VaR de Xi
+cdf.X.gam <- function(x, lam, gam, kmax = 100) {
+  dpois(0, lam) + sum(dpois(1:kmax, lam) * pgamma(x, (1:kmax) * gam, 1e-3))
+}
+
+# cdf.X.gam(x = 100, lam = 0.003, gam = 2, kmax = 100)
+
+VaR.X.Gam <- function(kappa, lam, gam) {
+  
+  optimise(function(x) abs(cdf.X.gam(x, lam, gam) - kappa), c(0, 5000))$minimum
+}
+
+VaR.X.Gam(kappa = 0.9995 , lam = 0.003, gam = 2)
+VaR.X.Gam(kappa = 0.9995 , lam = 0.004, gam = 1)
+
+## TVaR de Xi 
+TVaR.X.Gam <- function(kappa, lam, gam, kmax = 100) {
+  varf <- VaR.X.Gam(kappa, lam, gam)
+  
+  ss1 <- sapply(1:kmax, function(k) {
+    dpois(k, lam) * (k * gam * 1e3) * (1 - pgamma(varf, gam * k + 1, 1e-3))
+  })
+  
+  sum(ss1) / (1 - kappa)
+}
+
+TVaR.X.Gam(kappa = 0.9995 , lam = 0.003, gam = 2)
+TVaR.X.Gam(kappa = 0.9995 , lam = 0.004, gam = 1)
+
+## VaR de S
+m1 <- 1:2
+
+list.m = list()
+for (i in 1:10) {
+  list.m[[i]] <- m1
+}
+
+m_values <- expand.grid(list.m)
+m_values$qmn <- sapply(1:nrow(m_values), function(j) {
+  qm10(vect.m = as.numeric(m_values[j, ]), vect.lam, alpha_0)
+})
+   
+
+cdf_S <- function(x, n1, n2, alpha_0) {
+  vect.lam <- c(rep(0.003, n1), rep(0.004, n2)) ## paramètres de la Poisson
+  vect.gam <- c(rep(2, n1), rep(1, n2)) ## Bi ~ Gamma(vect.gam[i], 1e-3)
+  
+  n <- n1 + n2
+  nn1 <- 0:1
+  
+  list.m = list()
+  for (i in 1:n) {
+    list.m[[i]] <- nn1
+  }
+  
+  m_values <- expand.grid(list.m)
+  m_values$qmn <- sapply(1:nrow(m_values), function(j) {
+    qm10(vect.m = as.numeric(m_values[j, ])[1:n], vect.lam, alpha_0)
+  })
+  
+  m_values$mi.al <- sapply(1:nrow(m_values), function(j) {
+    sum(as.numeric(m_values[j, ])[1:n] * vect.gam)
+  })
+  
+  m_values$pgam <- sapply(1:nrow(m_values), function(j) {
+    pgamma(x, m_values$mi.al, 1e-3)
+  })
+  
+  # q0 <- exp((n - 1) * alpha_0 - sum(vect.lam))
+  sum(m_values$qmn[-1] * m_values$pgam[-1]) + m_values$qmn[1]
+}
+
+# cdf_S(4, 4, 5, alpha_0 = 0.001)
+
+VaR.S.Gam <- function(kappa, n1, n2, alpha_0) {
+  
+  optimise(function(x) abs(cdf_S(x, n1, n2, alpha_0) - kappa), c(0, 10000))$minimum
+}
+
+memory.limit(size = 35000) 
+VaR.S.Gam(0.995, 10, 10, 0)
