@@ -245,7 +245,7 @@ thau_vec <- function(alpha_0, table = kl_table2, maxval = 2^8,
   ## valeurs à partir de thau_4
   
   v_k <- v_k_fun(remove_i = remove_i, m = maxval)          # nu_k
-  ls <- lambda.s(alpha_0, remove_i = remove_i)   # lambda_s
+  ls <- lambda.s(alpha_0 = alpha_0, remove_i = remove_i)   # lambda_s
   
 
   
@@ -255,15 +255,15 @@ thau_vec <- function(alpha_0, table = kl_table2, maxval = 2^8,
   }
   
   ## zeta_vec (on ajoute beaucoup de colonnes de 0)
-  zeta <- cbind(rep(0, nrow(table)),
+  zeta <- unname(cbind(rep(0, nrow(table)),
                 table[, -4],
-                matrix(rep(0, maxval * nrow(table)),
-                       nrow = nrow(table)))
+                matrix(rep(0, (maxval - 4) * nrow(table)),
+                       nrow = nrow(table))))
   
   ## On retourne un vecteur complet de tau (peut être très grand)
-  full_vec <- sapply(1:maxval, function(k){
+  full_vec <- sapply(0:(maxval - 1), function(k){
     alpha_0/ls * v_k[k + 1] + 
-      sum((table$lambda_l - alpha0)/ls * zeta[, k + 1])
+      sum((table$lambda_l - alpha_0)/ls * zeta[, k + 1])
   })
   
   ## Si on doit convoluer, on convolue
@@ -300,8 +300,10 @@ fgp_k <- function(s, i){
 fgp_weight_S <- function(s, lam1, lam6, alpha0){
   fgp_pois((fgp_k(s, i = 1) * fgp_k(s, i = 6))^5, lam = alpha0) * 
     fgp_pois(fgp_k(s, i = 1), lam = 5 * (lam1 - alpha0)) * 
-    fgp_pois(fgp_k(s, i = 6), lam = 5 * (lam2 - alpha0))
+    fgp_pois(fgp_k(s, i = 6), lam = 5 * (lam6 - alpha0))
 }
+
+fgp_weight_S <- Vectorize(fgp_weight_S)
 
 weight_S <- function(lam1, lam6, alpha0, maxval = 2^8){
   ## sévérité dégénérée
@@ -330,8 +332,11 @@ coef.vs <- function(alpha_0) {
 
 # sum(coef.vs(0.025))
 ## Fonction de répartition de S
-F.S <- function(x, alpha_0) {
+F.S <- function(x, alpha_0, weight = NULL) {
   pk <- coef.vs(alpha_0)
+  if(!is.null(weight)){
+    pk <- weight_S(vect.lambda[1], vect.lambda[2], alpha0 = alpha_0)
+  }
   
   sum(pk[-1] * pgamma(x, 1:(length(pk) - 1), beta)) + pk[1]
 }
@@ -340,16 +345,21 @@ F.S <- function(x, alpha_0) {
 ##===
 
 
-VaR.S <- function(alpha_0, kappa) {
+VaR.S <- function(alpha_0, kappa, weight = NULL) {
   fm <- coef.vs(alpha_0)
   if (fm[1] > kappa) return(0)
   
-  optimise(function(x) abs(F.S(x, alpha_0) - kappa), c(0, 1000))$minimum
+  optimise(function(x) abs(F.S(x, alpha_0, weight = weight) - kappa), c(0, 1000))$minimum
 }
 
+thau_vec(alpha_0 = 0)
+
 VaR.S(0, 0.995)
+VaR.S(0, 0.995, weight = 1)
 VaR.S(0.05, 0.995)
-VaR.S(0.09, 0.995) 
+VaR.S(0.05, 0.995, weight = 1)
+VaR.S(0.09, 0.995)
+VaR.S(0.09, 0.995, weight = 1) 
 
 #seq.alpha_0 <- seq(0, 0.1, by = 0.005)
 #seq.kappa <- seq(0, 0.99, by = 0.01)
@@ -444,25 +454,28 @@ ggsave("graph_TVar.S.png",
 
 ## densité de J_(i)
 dens.J.i <- function(i, alpha_0, x) {
-  lam.i <- kl_table2[i, 4]
+  lam.i <- kl_table2$lambda_l[i]
   alph <- lam.i - alpha_0
   
   dpois(x, alph)
 }
 
-## densité de J_(-i)
-dens.J.im <- function(i, alpha_0, x) {
-  lam.i <- sum(kl_table2[-i, 4])
-  alph <- lam.i - alpha_0
-  
-  dpois(x, alph)
-}
+# ## densité de J_(-i)
+# dens.J.im <- function(i, alpha_0, x) {
+#   lam.i <- sum(kl_table2[-i, 4])
+#   alph <- lam.i - alpha_0
+#   
+#   dpois(x, alph)
+# }
  
 ## densité de (M_i, N_-i) :  
 dens.MN.i <- function(i, ki, ni_moins, alpha_0) {
+  
+  lam_mi <- lambda.s(alpha_0, remove_i = i)
+
   to.sum <- sapply(0:min(ki, ni_moins), function(j) {
     d1 <- dens.J.i(i, alpha_0, ki - j)
-    d2 <- dens.J.im(i, alpha_0, ni_moins - j)
+    d2 <- dpois(ni_moins - j, lam_mi)
     
     d1 * d2 * dpois(j, alpha_0)
     
@@ -539,21 +552,21 @@ v_k_im <- function(im, m = 14) {
 TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
                           maxval_gen = 2^8){
   
-  VaR <-VaR.S(alpha0, kappa = kap)
+  VaR <- VaR.S(alpha0, kappa = kap)
   
-  terms <- sapply(0:maxal_k, function(ki){ ## sum ki = 0,  ... infty
+  terms <- sapply(0:maxval_k, function(ki){ ## sum ki = 0,  ... infty
     
     zet_i_ki <- zeta(k = 3, ## dummy value when full_vec = TRUE
                      i = i, maxval = maxval_gen,
                      convol = ki, full_vec = TRUE)
     
     sum(sapply(0:maxval_k, function(ni){ ## sum n-i = 0 , ... infty
-      dens.MN.i(i, ki, ni, alpha_0 = alpha0) * # P(M_i = ki, N_-i = ni)
+      value <- dens.MN.i(i, ki, ni, alpha_0 = alpha0) * # P(M_i = ki, N_-i = ni)
         sum(sapply(1:maxval_gen, function(k){ # sum k = 1 ... infty
           sum(sapply(1:k, function(l){
             
             v <- v_k_fun(m = maxval_gen)
-            tau <- tau_vec(alpha0, kl_table2,
+            tau <- thau_vec(alpha0, kl_table2,
                            maxval = maxval_gen,
                            convol = ni - l,
                            remove_i = i)
@@ -565,6 +578,10 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
                        lower.tail = FALSE))
           }))
         }))
+      
+      print(paste0("progression...", scales::percent((ki + ni)/(max(ki) + max(ni)), 0.1)))
+      
+      return(value)
     }))
   })
   
