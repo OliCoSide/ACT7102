@@ -562,7 +562,8 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
     
     sum(sapply(0:maxval_k, function(ni){ ## sum n-i = 0 , ... infty
       value <- dens.MN.i(i, ki, ni, alpha_0 = alpha0) * # P(M_i = ki, N_-i = ni)
-        sum(sapply(1:maxval_gen, function(k){ # sum k = 1 ... infty
+        sum(sapply(1:(maxval_gen - 1), function(k){ # sum k = 1 ... infty
+          
           sum(sapply(1:k, function(l){
             
             v <- v_k_fun(m = maxval_gen)
@@ -571,12 +572,14 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
                            convol = ni - l,
                            remove_i = i)
             convol_v_tau <- Re(fft(fft(v)*fft(tau),inverse = TRUE))/maxval_gen
+            
             return(
               zet_i_ki[l + 1] * convol_v_tau[k - l + 1] * l/beta *
                 pgamma(VaR,
                        k + 1, beta,
                        lower.tail = FALSE))
           }))
+          
         }))
       
       print(paste0("progression...", scales::percent((ki + ni)/(max(ki) + max(ni)), 0.1)))
@@ -593,17 +596,17 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
 TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0)
 
 ## Poids associés à la distribution D_(-i) de mélange d'erlangs
-vect.thau.im <- function(alpha_0, im) {
-  v0 <- thau_nk_im(alpha_0, 0, im)
-  v1 <- thau_123_im(alpha_0, 1, im)
-  v2 <- thau_123_im(alpha_0, 2, im)
-  v3 <- thau_123_im(alpha_0, 3, im)
+#vect.thau.im <- function(alpha_0, im) {
+#  v0 <- thau_nk_im(alpha_0, 0, im)
+#  v1 <- thau_123_im(alpha_0, 1, im)
+#  v2 <- thau_123_im(alpha_0, 2, im)
+#  v3 <- thau_123_im(alpha_0, 3, im)
   
-  vk <- sapply(4:(length(v_k_im(im)) - 1), function(k) thau_nk_im(alpha_0, k, im))
+#  vk <- sapply(4:(length(v_k_im(im)) - 1), function(k) thau_nk_im(alpha_0, k, im))
   
-  uu <- c(v0, v1, v2, v3, vk)
-  uu / sum(uu)
-} 
+#  uu <- c(v0, v1, v2, v3, vk)
+#  uu / sum(uu)
+#} 
 
 #vuu <- vect.thau.im(alpha_0, 6)
 #sum(vuu)
