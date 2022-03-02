@@ -408,24 +408,24 @@ col4 <- hcl.colors(8, "Batlow")
 ## "Viridis", "Plasma, "Purple-Orange"
 ## "Zissou1", "SunsetDark",  "Spectral"
 
-ggsave("graph2_Var.S.png",
-       data.var.S2_long %>% 
-         ggplot(aes(x = kappa,
-                    color = alpha,
-                    group = factor(alpha))) + 
-         geom_line(aes(y = value), lwd = 2, alpha = 0.8) +
-         scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"), 
-                               low = tail(col4, 1),
-                               high = col4[1],
-                               trans = "exp") + 
-         theme_bw() + 
-         labs(x = TeX("kappa"),
-              y = TeX("$VaR_{\\kappa}(S)$"),
-              title = TeX("$VaR_{\\kappa}(S)$ selon la valeur de $\\alpha_0$"),
-              subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) + 
-         scale_y_continuous(labels = scales::dollar) + 
-         scale_x_continuous(labels = scales::dollar)
-)
+# ggsave("graph2_Var.S.png",
+#        data.var.S2_long %>% 
+#          ggplot(aes(x = kappa,
+#                     color = alpha,
+#                     group = factor(alpha))) + 
+#          geom_line(aes(y = value), lwd = 2, alpha = 0.8) +
+#          scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"), 
+#                                low = tail(col4, 1),
+#                                high = col4[1],
+#                                trans = "exp") + 
+#          theme_bw() + 
+#          labs(x = TeX("kappa"),
+#               y = TeX("$VaR_{\\kappa}(S)$"),
+#               title = TeX("$VaR_{\\kappa}(S)$ selon la valeur de $\\alpha_0$"),
+#               subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) + 
+#          scale_y_continuous(labels = scales::dollar) + 
+#          scale_x_continuous(labels = scales::dollar)
+# )
    
 
 ## TVaR de S
@@ -450,58 +450,58 @@ data.var.S2_long$TVaR.S <- sapply(1:nrow(data.var.S2_long), function(k) {
                               TVaR.S(data.var.S2_long[k, 4], data.var.S2_long[k, 1])
                             })
 
-ggsave("graph_TVar.S.png",
-       data.var.S2_long %>% 
-         ggplot(aes(x = kappa,
-                    color = alpha,
-                    group = factor(alpha))) + 
-         geom_line(aes(y = TVaR.S), lwd = 2, alpha = 0.8) +
-         scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"), 
-                               low = tail(col4, 1),
-                               high = col4[1],
-                               trans = "exp") + 
-         theme_bw() + 
-         labs(x = TeX("kappa"),
-              y = TeX("$TVaR_{\\kappa}(S)$"),
-              title = TeX("$TVaR_{\\kappa}(S)$ selon la valeur de $\\alpha_0$"),
-              subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) + 
-         scale_y_continuous(labels = scales::dollar) + 
-         scale_x_continuous(labels = scales::dollar)
-)
+# ggsave("graph_TVar.S.png",
+#        data.var.S2_long %>% 
+#          ggplot(aes(x = kappa,
+#                     color = alpha,
+#                     group = factor(alpha))) + 
+#          geom_line(aes(y = TVaR.S), lwd = 2, alpha = 0.8) +
+#          scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"), 
+#                                low = tail(col4, 1),
+#                                high = col4[1],
+#                                trans = "exp") + 
+#          theme_bw() + 
+#          labs(x = TeX("kappa"),
+#               y = TeX("$TVaR_{\\kappa}(S)$"),
+#               title = TeX("$TVaR_{\\kappa}(S)$ selon la valeur de $\\alpha_0$"),
+#               subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) + 
+#          scale_y_continuous(labels = scales::dollar) + 
+#          scale_x_continuous(labels = scales::dollar)
+# )
 
 ##============== Calcul des contributions =====================
 # kl_table2
 
-## densité de J_(i)
-dens.J.i <- function(i, alpha_0, x) {
-  lam.i <- kl_table2$lambda_l[i]
-  alph <- lam.i - alpha_0
-  
-  dpois(x, alph)
-}
-
+# ## densité de J_(i)
+# dens.J.i <- function(i, alpha_0, x) {
+#   lam.i <- kl_table2$lambda_l[i]
+#   alph <- lam.i - alpha_0
+# 
+#   dpois(x, alph)
+# }
+# 
 # ## densité de J_(-i)
 # dens.J.im <- function(i, alpha_0, x) {
 #   lam.i <- sum(kl_table2[-i, 4])
 #   alph <- lam.i - alpha_0
-#   
+# 
 #   dpois(x, alph)
 # }
  
-## densité de (M_i, N_-i) :  
-dens.MN.i <- function(i, ki, ni_moins, alpha_0) {
-  
-  lam_mi <- lambda.s(alpha_0, remove_i = i)
-
-  to.sum <- sapply(0:min(ki, ni_moins), function(j) {
-    d1 <- dens.J.i(i, alpha_0, ki - j)
-    d2 <- dpois(ni_moins - j, lam_mi)
-    
-    d1 * d2 * dpois(j, alpha_0)
-    
-    })
-  sum(to.sum)
-}
+# ## densité de (M_i, N_-i) :  
+# dens.MN.i <- function(i, ki, ni_moins, alpha_0) {
+#   
+#   lam_mi <- lambda.s(alpha_0, remove_i = i)
+# 
+#   to.sum <- sapply(0:min(ki, ni_moins), function(j) {
+#     d1 <- dens.J.i(i, alpha_0, ki - j)
+#     d2 <- dpois(ni_moins - j, lam_mi)
+#     
+#     d1 * d2 * dpois(j, alpha_0)
+#     
+#     })
+#   sum(to.sum)
+# }
 
 ## Coefficients de C_(-i)
 v_k_im <- function(im, m = 14) {
@@ -582,25 +582,33 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
                      convol = ki, full_vec = TRUE)
     
     sum(sapply(0:maxval_k, function(ni){ ## sum n-i = 0 , ... infty
-      value <- dens.MN.i(i, ki, ni, alpha_0 = alpha0) * # P(M_i = ki, N_-i = ni)
-        sum(sapply(1:(maxval_gen - 1), function(k){ # sum k = 1 ... infty
+        value <- sum(sapply(0:min(ki, ni), function(j){ ## sum j = 0... min(ki, ni)
           
-          sum(sapply(1:k, function(l){
-            
-            v <- v_k_fun(m = maxval_gen, convol = l, remove_i = i)
-            tau <- thau_vec(alpha0, kl_table2,
-                           maxval = maxval_gen,
-                           convol = ni - l,
-                           remove_i = i)
-            convol_v_tau <- Re(fft(fft(v)*fft(tau),inverse = TRUE))/maxval_gen
-            
-            return(
-              zet_i_ki[l + 1] * convol_v_tau[k - l + 1] * l/beta *
-                pgamma(VaR,
-                       k + 1, beta,
-                       lower.tail = FALSE))
-          }))
+          ## on calcule nos poids pour les deux autres boucles (ne dépendent pas de k ni de l)
+          v <- v_k_fun(m = maxval_gen, convol = j, remove_i = i)
+          tau <- thau_vec(alpha0, kl_table2,
+                          maxval = maxval_gen,
+                          convol = ni - j,
+                          remove_i = i)
+          convol_v_tau <- Re(fft(fft(v)*fft(tau),inverse = TRUE))/maxval_gen
           
+          
+          ## densité des poissons
+          dpois(ki - j, kl_table2$lambda_l[i] - alpha0) *
+          dpois(ni - j, lambda.s(alpha0, remove_i = i)) * 
+          dpois(j, alpha0) * 
+            
+            sum(sapply(1:(maxval_gen - 1), function(k){ # sum k = 1 ... infty
+              
+              sum(sapply(1:k, function(l){
+                return(
+                  zet_i_ki[l + 1] * convol_v_tau[k - l + 1] * l/beta *
+                    pgamma(VaR,
+                           k + 1, beta,
+                           lower.tail = FALSE))
+              }))
+              
+            }))
         }))
       
       to_print <- (maxval_k*ki + ni)/((maxval_k + 1)^2)
@@ -615,7 +623,20 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
   )
 }
 
-TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0, maxval_k = 5)
+TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0, maxval_k = 25)
+
+alpha_to_try <- c(0, 0.05, 0.09)
+i_to_try <- c(1, 6)
+
+outer(alpha_to_try, i_to_try, function(a, i){
+  margin_to_be_precise <- alpha_to_try * 400
+  
+  TVaR_kap_Xi_S(kap = 0.995,
+                i = i,
+                alpha0 = a,
+                maxval_k = 15 + margin_to_be_precise)
+  
+})
 
 ## Poids associés à la distribution D_(-i) de mélange d'erlangs
 #vect.thau.im <- function(alpha_0, im) {
