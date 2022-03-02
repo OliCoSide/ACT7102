@@ -183,6 +183,12 @@ lambda.s <- function(alpha_0, remove_i = NULL) {
 v_k_fun <- function(m = 2^8, remove_i = NULL,
                     convol = 1) {
   
+  if(convol < 1){
+    return(
+      c(1, rep(0, m - 1))
+    )
+  }
+  
   ind_15 <- 0   # par défaut, on ne retire pas de i 
   ind_610 <- 0  
   
@@ -221,6 +227,12 @@ zeta <- function(k, i, convol = 1,
                  maxval = 2^8,
                  full_vec = FALSE){
   
+  if(convol < 1){
+    return(
+      c(1, rep(0, maxval - 1))
+    )
+  }
+  
   ## Pour i = 1...5
   zet <- c(k1, rep(0, maxval - length(k1)))
   ## Pour i = 6..10 on corrige
@@ -244,6 +256,12 @@ thau_vec <- function(alpha_0, table = kl_table2, maxval = 2^8,
   ## En réalité thau_nk calcule la valeur de thau_0 et les 
   ## valeurs à partir de thau_4
   
+  if(convol < 1){
+    return(
+      c(1, rep(0, maxval - 1))
+    )
+  }
+  
   v_k <- v_k_fun(remove_i = remove_i, m = maxval)          # nu_k
   ls <- lambda.s(alpha_0 = alpha_0, remove_i = remove_i)   # lambda_s
   
@@ -260,9 +278,11 @@ thau_vec <- function(alpha_0, table = kl_table2, maxval = 2^8,
                 matrix(rep(0, (maxval - 4) * nrow(table)),
                        nrow = nrow(table))))
   
+  
+  
   ## On retourne un vecteur complet de tau (peut être très grand)
   full_vec <- sapply(0:(maxval - 1), function(k){
-    alpha_0/ls * v_k[k + 1] + 
+    ifelse(is.null(remove_i), alpha_0/ls * v_k[k + 1], 0) + 
       sum((table$lambda_l - alpha_0)/ls * zeta[, k + 1])
   })
   
@@ -554,6 +574,7 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
   
   VaR <- VaR.S(alpha0, kappa = kap)
   
+  
   terms <- sapply(0:maxval_k, function(ki){ ## sum ki = 0,  ... infty
     
     zet_i_ki <- zeta(k = 3, ## dummy value when full_vec = TRUE
@@ -566,7 +587,7 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
           
           sum(sapply(1:k, function(l){
             
-            v <- v_k_fun(m = maxval_gen)
+            v <- v_k_fun(m = maxval_gen, convol = l, remove_i = i)
             tau <- thau_vec(alpha0, kl_table2,
                            maxval = maxval_gen,
                            convol = ni - l,
@@ -582,7 +603,8 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
           
         }))
       
-      print(paste0("progression...", scales::percent((ki + ni)/(max(ki) + max(ni)), 0.1)))
+      to_print <- (maxval_k*ki + ni)/((maxval_k + 1)^2)
+      print(paste0("progression...", scales::percent(to_print, 0.1)))
       
       return(value)
     }))
@@ -593,7 +615,7 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
   )
 }
 
-TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0)
+TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0, maxval_k = 5)
 
 ## Poids associés à la distribution D_(-i) de mélange d'erlangs
 #vect.thau.im <- function(alpha_0, im) {
