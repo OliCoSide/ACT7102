@@ -12,6 +12,8 @@
 ### Exemple 13
 ###=======================================
 
+library(latex2exp)
+
 ## Trouver l'espérance et la variance des Xi
 
 vect.lambda <- c(0.1, 0.2) 
@@ -295,16 +297,16 @@ thau_vec <- function(alpha_0, table = kl_table2, maxval = 2^8,
 }
 
 # ## Poids associés à la distribution D de mélange d'erlangs
- vect.thau <- function(alpha_0) {
-   v0 <- thau_nk(alpha_0, 0)
-   v1 <- thau_123(alpha_0, 1)
-   v2 <- thau_123(alpha_0, 2)
-   v3 <- thau_123(alpha_0, 3)
-   
-   vk <- sapply(4:(length(v_k) - 1), function(k) thau_nk(alpha_0, k))
-   
-   c(v0, v1, v2, v3, vk)
- } 
+ # vect.thau <- function(alpha_0) {
+ #   v0 <- thau_nk(alpha_0, 0)
+ #   v1 <- thau_123(alpha_0, 1)
+ #   v2 <- thau_123(alpha_0, 2)
+ #   v3 <- thau_123(alpha_0, 3)
+ #   
+ #   vk <- sapply(4:(length(v_k) - 1), function(k) thau_nk(alpha_0, k))
+ #   
+ #   c(v0, v1, v2, v3, vk)
+ # } 
 
 # sum(vect.thau(0.5) > 1)
 
@@ -409,21 +411,21 @@ col4 <- hcl.colors(8, "Batlow")
 ## "Zissou1", "SunsetDark",  "Spectral"
 
 # ggsave("graph2_Var.S.png",
-#        data.var.S2_long %>% 
+#        data.var.S2_long %>%
 #          ggplot(aes(x = kappa,
 #                     color = alpha,
-#                     group = factor(alpha))) + 
+#                     group = factor(alpha))) +
 #          geom_line(aes(y = value), lwd = 2, alpha = 0.8) +
-#          scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"), 
+#          scale_colour_gradient(name = TeX("Valeur de $\\alpha_0$"),
 #                                low = tail(col4, 1),
 #                                high = col4[1],
-#                                trans = "exp") + 
-#          theme_bw() + 
+#                                trans = "exp") +
+#          theme_bw() +
 #          labs(x = TeX("kappa"),
 #               y = TeX("$VaR_{\\kappa}(S)$"),
 #               title = TeX("$VaR_{\\kappa}(S)$ selon la valeur de $\\alpha_0$"),
-#               subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) + 
-#          scale_y_continuous(labels = scales::dollar) + 
+#               subtitle = TeX("n = 10, $\\lambda_i = 0.1 * (i < 6) + 0.2 * (i > 5)$, $\\beta = 0.1$")) +
+#          scale_y_continuous(labels = scales::dollar) +
 #          scale_x_continuous(labels = scales::dollar)
 # )
    
@@ -569,7 +571,7 @@ v_k_im <- function(im, m = 14) {
 # sum(vuu)
 
 ## PAr Oli
-TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
+TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 50,
                           maxval_gen = 2^8){
   
   VaR <- VaR.S(alpha0, kappa = kap)
@@ -623,20 +625,52 @@ TVaR_kap_Xi_S <- function(kap, i, alpha0, maxval_k = 3,
   )
 }
 
-TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0, maxval_k = 25)
+# TVaR_kap_Xi_S(kap = 0.995, i = 1, alpha0 = 0.01, maxval_k = 25)
+
+table_exemple13 <- data.frame(alpha_0 = NULL, 
+                              VaR.S = NULL, 
+                              TVaR.S = NULL, 
+                              TVaRX1.S = NULL, 
+                              TVaRX6.S = NULL)
 
 alpha_to_try <- c(0, 0.05, 0.09)
 i_to_try <- c(1, 6)
+load(table_exemple13)
+for (alph in alpha_to_try){
+    margin_to_be_precise <- alph * 400
+    
+    VaRS <- VaR.S(alph, 0.995)
+    TVaRS <- TVaR.S(alph, 0.995)
+    TVaRX1S <- TVaR_kap_Xi_S(kap = 0.995, 
+                             i = 1, 
+                             alpha0 = alph, 
+                             maxval_k = 15 + margin_to_be_precise)
+    
+    TVaRX6S <- TVaR_kap_Xi_S(kap = 0.995, 
+                             i = 6, 
+                             alpha0 = alph, 
+                             maxval_k = 15 + margin_to_be_precise)
+    
+    ttt <- data.frame(alpha_0 = alph, 
+                      VaR.S = VaRS, 
+                      TVaR.S = TVaRS, 
+                      TVaRX1.S = TVaRX1S, 
+                      TVaRX6.S = TVaRX6S)
+    
+    table_exemple13 <- rbind(table_exemple13, ttt)
+  
+}
 
-outer(alpha_to_try, i_to_try, function(a, i){
-  margin_to_be_precise <- alpha_to_try * 400
-  
-  TVaR_kap_Xi_S(kap = 0.995,
-                i = i,
-                alpha0 = a,
-                maxval_k = 15 + margin_to_be_precise)
-  
-})
+save(table_exemple13, file = "table_exemple13")
+# table_exemple13 <- outer(alpha_to_try, i_to_try, function(a, i){
+#   margin_to_be_precise <- a * 400
+#   
+#   TVaR_kap_Xi_S(kap = 0.995,
+#                 i = i,
+#                 alpha0 = a,
+#                 maxval_k = 15 + margin_to_be_precise)
+#   
+# })
 
 ## Poids associés à la distribution D_(-i) de mélange d'erlangs
 #vect.thau.im <- function(alpha_0, im) {
@@ -697,91 +731,91 @@ weight.box2 <- function(alpha_0, kappa, ki, i, ni) {
 }
 
 ##
-TVaR.box2 <- function(i, alpha_0, kappa, kimax = 3, nimax = 3) {
-  vect.ki <- 1:kimax
-  vect.ni <- 1:nimax
-  
-  s2 <- sapply(vect.ki, function(ki) {
-    
-    s1 <- sapply(vect.ni, function(ni) {
-      
-      dd1 <- dens.MN.i(i, ki, ni, alpha_0)
-      dd2 <- weight.box2(alpha_0, kappa, ki, i, ni)
-      
-      dd1 * dd2
-    })
-    
-    sum(s1)
-    
-  })
-  
-  sum(s2) / (1 - kappa)
-}
+# TVaR.box2 <- function(i, alpha_0, kappa, kimax = 3, nimax = 3) {
+#   vect.ki <- 1:kimax
+#   vect.ni <- 1:nimax
+#   
+#   s2 <- sapply(vect.ki, function(ki) {
+#     
+#     s1 <- sapply(vect.ni, function(ni) {
+#       
+#       dd1 <- dens.MN.i(i, ki, ni, alpha_0)
+#       dd2 <- weight.box2(alpha_0, kappa, ki, i, ni)
+#       
+#       dd1 * dd2
+#     })
+#     
+#     sum(s1)
+#     
+#   })
+#   
+#   sum(s2) / (1 - kappa)
+# }
 
 TVaR.box2(1, alpha_0, kappa, kimax = 2, nimax = 2)
 
 ## Poids associé à  sum_{m = 1}^{ni - j} D_{i, m} + sum_{r = 1}^{j} C_{i, r}
-weight.DC <- function(alpha_0, im, ni, j) { 
-  p2 <- weight.Di(alpha_0, im, ni, j) 
-  p3 <- weight.Ci(im, j)
-  
-  phip <-  fft(p2) * fft(p3)
-  
-  uu <- Re(fft(phip, inverse = T)) / length(phip)
-  round(uu, 8)[1:100]
-}
+# weight.DC <- function(alpha_0, im, ni, j) { 
+#   p2 <- weight.Di(alpha_0, im, ni, j) 
+#   p3 <- weight.Ci(im, j)
+#   
+#   phip <-  fft(p2) * fft(p3)
+#   
+#   uu <- Re(fft(phip, inverse = T)) / length(phip)
+#   round(uu, 8)[1:100]
+# }
 
 
 ## Poids associés à sum_{l = 1}^ki B_{i,l}
-weight.Bi <- function(ki, i) {
-  
-  if(i <= 5) {
-    kk <- k1
-  } else {
-    kk <- k2
-  }
-  phi.kk <- (phi.Ki(kk, m = 8))^ki
-  
-  Re(fft(phi.kk, inverse = T)) / length(phi.kk)
-}
+# weight.Bi <- function(ki, i) {
+#   
+#   if(i <= 5) {
+#     kk <- k1
+#   } else {
+#     kk <- k2
+#   }
+#   phi.kk <- (phi.Ki(kk, m = 8))^ki
+#   
+#   Re(fft(phi.kk, inverse = T)) / length(phi.kk)
+# }
 
 #sum(weight.Bi(6, 3))
 
 ## Poids associés à sum_{m = 1}^{ni - j} D_{i, m}
-weight.Di <- function(alpha_0, im, ni, j) {
-  kk <- vect.thau.im(alpha_0, im)
-  
-  phi.kk <- (phi.Ki(kk, m = 14))^(ni - j)
-  
-  uu <- Re(fft(phi.kk, inverse = T)) / length(phi.kk)
-  round(uu, 8)[1:100]
-}
+# weight.Di <- function(alpha_0, im, ni, j) {
+#   kk <- vect.thau.im(alpha_0, im)
+#   
+#   phi.kk <- (phi.Ki(kk, m = 14))^(ni - j)
+#   
+#   uu <- Re(fft(phi.kk, inverse = T)) / length(phi.kk)
+#   round(uu, 8)[1:100]
+# }
 
 # length(weight.Di(alpha_0, 6, 3, 1))
 
 ## Poids associés à sum_{r = 1}^{j} C_{i, r}
-weight.Ci <- function(im, j) {
-  kk <- v_k_im(im)
-  
-  phi.kk <- (phi.Ki(kk, m = 14))^j
-  
-  uu <- Re(fft(phi.kk, inverse = T)) / length(phi.kk)
-  round(uu, 8)[1:100]
-}
+# weight.Ci <- function(im, j) {
+#   kk <- v_k_im(im)
+#   
+#   phi.kk <- (phi.Ki(kk, m = 14))^j
+#   
+#   uu <- Re(fft(phi.kk, inverse = T)) / length(phi.kk)
+#   round(uu, 8)[1:100]
+# }
 
 #length(weight.Ci(4, 2))
 
 ## Poids associé à sum_{l = 1}^ki B_{i,l} + sum_{m = 1}^{ni - j} D_{i, m} + sum_{r = 1}^{j} C_{i, r}
-weight.BDC <- function() {
-  p1 <- weight.Bi(ki, i) 
-  p2 <- weight.Di(alpha_0, im, ni, j) 
-  p3 <- weight.Ci(im, j)
-  
-  phip <- fft(p1) * fft(p2) * fft(p3)
-  
-  uu <- Re(fft(phip, inverse = T)) / length(phip)
-  round(uu, 8)[1:100]
-}
+# weight.BDC <- function() {
+#   p1 <- weight.Bi(ki, i) 
+#   p2 <- weight.Di(alpha_0, im, ni, j) 
+#   p3 <- weight.Ci(im, j)
+#   
+#   phip <- fft(p1) * fft(p2) * fft(p3)
+#   
+#   uu <- Re(fft(phip, inverse = T)) / length(phip)
+#   round(uu, 8)[1:100]
+# }
 
 ## Proposition 8
 qm10 <- function(vect.m, vect.lam, alpha_0) {
@@ -801,23 +835,24 @@ qm10 <- function(vect.m, vect.lam, alpha_0) {
 }
  
 
-psi.ji <- function(vect.j, vect.m, mi, i, m.max = 3) {
-  pv <- weight.Bi(mi, i)
-  
-  sapply(1:length(vect.m), function(m.i) {
-    valeurs <- m_values[m.i, ]
-    
-  })
-  
-} 
+# psi.ji <- function(vect.j, vect.m, mi, i, m.max = 3) {
+#   pv <- weight.Bi(mi, i)
+#   
+#   sapply(1:length(vect.m), function(m.i) {
+#     valeurs <- m_values[m.i, ]
+#     
+#   })
+#   
+# } 
 
-m1 <- 1:6
-m2 <- 1:6
-m3 <- 1:6
+# m1 <- 1:6
+# m2 <- 1:6
+# m3 <- 1:6
+# 
+# m_values <- expand.grid(m1, m2, m3)
+# 
+# m_values[33,]
 
-m_values <- expand.grid(m1, m2, m3)
-
-m_values[33,]
 ##===================================================================
 ## EXEMPLE 12
 ##===================================================================
@@ -865,55 +900,4 @@ TVaR.X.Gam(kappa = 0.9995 , lam = 0.003, gam = 2)
 TVaR.X.Gam(kappa = 0.9995 , lam = 0.004, gam = 1)
 
 ## VaR de S
-m1 <- 1:2
-
-list.m = list()
-for (i in 1:10) {
-  list.m[[i]] <- m1
-}
-
-m_values <- expand.grid(list.m)
-m_values$qmn <- sapply(1:nrow(m_values), function(j) {
-  qm10(vect.m = as.numeric(m_values[j, ]), vect.lam, alpha_0)
-})
-   
-
-cdf_S <- function(x, n1, n2, alpha_0) {
-  vect.lam <- c(rep(0.003, n1), rep(0.004, n2)) ## paramètres de la Poisson
-  vect.gam <- c(rep(2, n1), rep(1, n2)) ## Bi ~ Gamma(vect.gam[i], 1e-3)
-  
-  n <- n1 + n2
-  nn1 <- 0:1
-  
-  list.m = list()
-  for (i in 1:n) {
-    list.m[[i]] <- nn1
-  }
-  
-  m_values <- expand.grid(list.m)
-  m_values$qmn <- sapply(1:nrow(m_values), function(j) {
-    qm10(vect.m = as.numeric(m_values[j, ])[1:n], vect.lam, alpha_0)
-  })
-  
-  m_values$mi.al <- sapply(1:nrow(m_values), function(j) {
-    sum(as.numeric(m_values[j, ])[1:n] * vect.gam)
-  })
-  
-  m_values$pgam <- sapply(1:nrow(m_values), function(j) {
-    pgamma(x, m_values$mi.al, 1e-3)
-  })
-  
-  # q0 <- exp((n - 1) * alpha_0 - sum(vect.lam))
-  sum(m_values$qmn[-1] * m_values$pgam[-1]) + m_values$qmn[1]
-}
-
-# cdf_S(4, 4, 5, alpha_0 = 0.001)
-
-VaR.S.Gam <- function(kappa, n1, n2, alpha_0) {
-  
-  optimise(function(x) abs(cdf_S(x, n1, n2, alpha_0) - kappa), c(0, 10000))$minimum
-}
-
-memory.limit(size = 35000) 
-VaR.S.Gam(0.995, 10, 10, 0)
-
+ 
