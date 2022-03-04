@@ -78,20 +78,18 @@ for (k in c(0.25,0.50,0.95,0.99,0.995)){
 }
 table2
 
-in.repS <- function(x, m1,m2, alpha) densM1M2(m1,m2,alpha)*pgamma(x, shape = (0.5*m1+0.25*m2), rate = 0.1)
-in.TVaRkS <- function(x, m1,m2, alpha) densM1M2(m1,m2,alpha)*(m1*0.5+m2*0.25)/0.1*(1-pgamma(VaRS, shape = (0.5*m1+0.25*m2), rate = 0.1))
-in.TVaRkX1.S <-  function(x, m1,m2, alpha) densM1M2(m1,m2,alpha)*(m1*0.5)/0.1*(1-pgamma(VaRS, shape = (0.5*m1+0.25*m2), rate = 0.1))
-in.TVaRkX2.S <- function(x, m1,m2, alpha) densM1M2(m1,m2,alpha)*(m2*0.25)/0.1*(1-pgamma(VaRS, shape = (0.5*m1+0.25*m2), rate = 0.1))
+dens <- function(alpha) outer(0:100, 0:100, densM1M2, alpha = alpha)
+sum.des.ma <- outer((0:100)*0.5,(0:100)*0.25,"+")
+des.ma1 <- matrix((0:100)*0.5, nrow=101,ncol = 101)
+des.ma2 <- matrix((0:100)*0.25, byrow = TRUE, nrow = 101, ncol = 101)
 
-repS <- function(x, alpha) sum(outer((0:500), (0:500), in.repS, x=x, alpha=alpha))
+repS <- function(x, alpha) sum(dens(alpha)*pgamma(x, sum.des.ma, rate = 0.1))
 
 VaRkS <- function(k, alpha) optimize(function(x,k,alpha) abs(repS(x, alpha)-k), c(5,200), k=k, alpha=alpha)$minimum
 
-TVaRkS <- function(k, alpha) 1/(1-k)*sum(outer((0:500), (0:500), in.TVaRkS, x=x, alpha=alpha))
-
-TVaRkX1.S <- function(k, alpha) 1/(1-k)*sum(outer((0:500), (0:500), in.TVaRkX1.S, x=x, alpha=alpha))
-
-TVaRkX2.S <- function(k, alpha) 1/(1-k)*sum(outer((0:500), (0:500), in.TVaRkX2.S, x=x, alpha=alpha))
+TVaRkS <- function(k,alpha) 1/(1-k)*sum(dens(alpha)*sum.des.ma/0.1*(1-pgamma(VaRS,sum.des.ma+1,rate = 0.1)))
+TVaRkX1.S <- function(k,alpha) 1/(1-k)*sum(dens(alpha)*des.ma1/0.1*(1-pgamma(VaRS,sum.des.ma+1,rate = 0.1)))
+TVaRkX2.S <- function(k,alpha) 1/(1-k)*sum(dens(alpha)*des.ma2/0.1*(1-pgamma(VaRS,sum.des.ma+1,rate = 0.1)))
 
 table3 <- data.frame(alpha = NULL, kappa = NULL, VaRS = NULL, TVaRS = NULL, TVaRX1.S = NULL, TVaRX2.S = NULL)
 
@@ -105,6 +103,6 @@ for (k in c(0.25,0.50,0.95,0.99,0.995)){
   table3 <- rbind(table3, ttt)
 }
 }
-##Temps de calcul est long
+##Temps de calcul est ~2min. 
 
 table3
