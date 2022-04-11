@@ -63,3 +63,6 @@ rCopula(3, cop)
 frankCopula(param = 0.5, dim = 2)
 gumbelCopula(param = 0.5, dim = 2)
 amhCopula(param = 0.5, dim = 2)
+
+##empCopula
+
