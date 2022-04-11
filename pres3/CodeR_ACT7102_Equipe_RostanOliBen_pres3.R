@@ -48,3 +48,18 @@ F.frank <- function(alpha, u1, u2) {
   frac1 <- f1(u1) * f1(u2) / f1(1)
   (- 1 / alpha) * log(1 + frac1)
 }
+
+
+
+### copules
+rCopula(3, normalCopula(0.5, dim = 2))
+rCopula(3, claytonCopula(2, dim = 2))
+
+
+cop <- claytonCopula(param = 0.5, dim = 2)
+rCopula(3, cop)
+
+
+frankCopula(param = 0.5, dim = 2)
+gumbelCopula(param = 0.5, dim = 2)
+amhCopula(param = 0.5, dim = 2)
