@@ -49,15 +49,35 @@ F.frank <- function(alpha, u1, u2) {
   (- 1 / alpha) * log(1 + frac1)
 }
 
+## Utilisation du package copula
+install.packages("copula")
+library(copula)
 
+nsim <- 1e5
 
 ### copules
-rCopula(3, normalCopula(0.5, dim = 2))
-rCopula(3, claytonCopula(2, dim = 2))
+
+table.simul <- function(family, theta, nsim = nsim, seed = 2022) {
+  ## family = "clayton", "frank", "amh", "gumbel", "normal"
+  set.seed(seed)
+  if (family == "normal") {
+    cop
+  }
+}
+
+set.seed(1)  
+rCopula(3, normalCopula(0.5, dim = 2)) 
+
+set.seed(1)
+cop1 <- archmCopula(family = "clayton", param = 0.5, dim = 2)
+rCopula(3, cop1)
+
+set.seed(1) 
+rCopula(3, claytonCopula(param = 0.5, dim = 2))
 
 
-cop <- claytonCopula(param = 0.5, dim = 2)
-rCopula(3, cop)
+cop.Clayton <- claytonCopula(param = 0.5, dim = 2)
+rCopula(nsim, cop.Clayton)
 
 
 frankCopula(param = 0.5, dim = 2)
