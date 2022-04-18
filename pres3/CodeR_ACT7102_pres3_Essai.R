@@ -102,8 +102,7 @@ g <- function(param, real_copula) {
   return(g1)
   
 }
-
-## family = "clayton", "frank", "amh", "gumbel", "normal"
+ 
 g(param = 0.5, amhCopula) 
 g(param = 0.5, frankCopula)
 
