@@ -66,7 +66,7 @@ Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 
 [Olivier Côté](mailto:olivier.cote.12@ulaval.ca)
 
-Project Link: [https://github.com/OliCoSide/ACT7102](https://github.com/OliCoSide/ACT7102)
+Project Link: [https://github.com/OliCoSide/ACT7102](https://github.com/OliCoSide/ACT7102-H22)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -83,16 +83,16 @@ Project Link: [https://github.com/OliCoSide/ACT7102](https://github.com/OliCoSid
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/OliCoSide/ACT7102.svg?style=for-the-badge
-[contributors-url]: https://github.com/OliCoSide/ACT7102/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/OliCoSide/ACT7102.svg?style=for-the-badge
-[forks-url]: https://github.com/OliCoSide/ACT7102/network/members
-[stars-shield]: https://img.shields.io/github/stars/OliCoSide/ACT7102.svg?style=for-the-badge
-[stars-url]: https://github.com/OliCoSide/ACT7102/stargazers
-[issues-shield]: https://img.shields.io/github/issues/OliCoSide/ACT7102.svg?style=for-the-badge
-[issues-url]: https://github.com/OliCoSide/ACT7102/issues
-[license-shield]: https://img.shields.io/github/license/OliCoSide/ACT7102.svg?style=for-the-badge
-[license-url]: https://github.com/OliCoSide/ACT7102/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/OliCoSide/ACT7102-H22.svg?style=for-the-badge
+[contributors-url]: https://github.com/OliCoSide/ACT7102-H22/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/OliCoSide/ACT7102-H22.svg?style=for-the-badge
+[forks-url]: https://github.com/OliCoSide/ACT7102-H22/network/members
+[stars-shield]: https://img.shields.io/github/stars/OliCoSide/ACT7102-H22.svg?style=for-the-badge
+[stars-url]: https://github.com/OliCoSide/ACT7102-H22/stargazers
+[issues-shield]: https://img.shields.io/github/issues/OliCoSide/ACT7102-H22.svg?style=for-the-badge
+[issues-url]: https://github.com/OliCoSide/ACT7102-H22/issues
+[license-shield]: https://img.shields.io/github/license/OliCoSide/ACT7102-H22.svg?style=for-the-badge
+[license-url]: https://github.com/OliCoSide/ACT7102-H22/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/olivier-cote-act
 [product-screenshot]: images/screenshot.png
